@@ -114,6 +114,8 @@ int main(int argc, char **argv) {
         exit(1);
       }
     }
+    free(tmp1);
+    free(tmp);
     // only if execvp is successful
     processes[jId - 1].jobId = jId;
     processes[jId - 1].processId = pid; // number from fork();
