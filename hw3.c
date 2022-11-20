@@ -69,7 +69,7 @@ char **getArgs(char *buffer) {
     char **tokens = malloc(capacity * sizeof(char*));
 
     char *delimiters = " \t\r\n";
-    char *token = strtok(line, delimiters);
+    char *token = strtok(buffer, delimiters);
 
     while (token != NULL) {
         tokens[length] = token;
