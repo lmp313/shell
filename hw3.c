@@ -5,6 +5,11 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+int jId = 1;
+size_t bufsize = 32;
+pid_t pid;
+int check = 0;
+
 typedef struct Process {
   int jobId;
   int processId;
@@ -15,7 +20,6 @@ typedef struct Process {
 
 char *getCmd() {
   char *buffer;
-  size_t bufsize = 32;
   int tmp;
 
   buffer = (char *)malloc(bufsize * sizeof(char));
@@ -26,109 +30,95 @@ char *getCmd() {
 
   printf("> ");
   tmp = getline(&buffer, &bufsize, stdin);
-  buffer[tmp - 1] = '\0';
+  if (buffer[tmp - 2] == '&') {
+    check = tmp-2; //(tmp-2) so that I can know size of buffer for later
+    buffer[tmp - 2] = '\0';
+  } else {
+    buffer[tmp - 1] = '\0';
+  }
   return buffer;
 }
 
 char **getArgs(char *buffer) {
-  // size_t bufsize = 32;
-  // char *t = strtok(buffer, " ");
-  // int tmp = 10;
-  // char **x = (char **)malloc(tmp * sizeof(char *));
-  // for (int i = 0; i < tmp; i++) {
-  //   x[i] = (char *)malloc(bufsize * sizeof(char));
-  // }
-  // int i = 0;
-  // while (t != NULL) {
-  //   strcpy(x[i], t);
-  //   // printf("%s\n", t);
-  //   t = strtok(NULL, " ");
-  //   i++;
-  // }
+  int length = 0;
+  int capacity = 16;
+  
+  char **tokens = malloc(capacity * sizeof(char *));
 
-  // char **arg = (char **)malloc(i * sizeof(char *));
-  // for (int i = 0; i < tmp; i++) {
-  //   arg[i] = (char *)malloc(bufsize * sizeof(char));
-  // }
-  // int z;
-  // for (z = 0; z < i; z++) {
-  //   strcpy(arg[z], x[z]);
-  // }
-  // arg[z] = NULL;
-  // /*for(int y = 0; y <= i; y++) {
-  //       printf("%s, y=%d :: ", arg[y], y);
-  //     }*/
-  // for (int i = 0; i < tmp; i++) {
-  //   free(x[i]);
-  // }
-  // free(x);
-  // return arg;
-    int length = 0;
-    int capacity = 16;
+  char *delimiters = " \t\r\n";
+  char *token = strtok(buffer, delimiters);
 
-    char **tokens = malloc(capacity * sizeof(char*));
+  while (token != NULL) {
+    tokens[length] = token;
+    length++;
 
-    char *delimiters = " \t\r\n";
-    char *token = strtok(buffer, delimiters);
-
-    while (token != NULL) {
-        tokens[length] = token;
-        length++;
-
-        if (length >= capacity) {
-            capacity = (int) (capacity * 2);
-            tokens = realloc(tokens, capacity * sizeof(char*));
-        }
-
-        token = strtok(NULL, delimiters);
+    if (length >= capacity) {
+      capacity = (int)(capacity * 2);
+      tokens = realloc(tokens, capacity * sizeof(char *));
     }
 
-    tokens[length] = NULL;
-    return tokens;
+    token = strtok(NULL, delimiters);
+  }
+
+  tokens[length] = NULL;
+  return tokens;
 }
 
-Process *createJob() {}
+void createJob(char *tmp, char **tmp1, Process *processes) {
+  if ((pid = fork()) == -1) {
+    printf("Fork not successful, exiting...");
+  }
+  if (pid == 0) {
+    if (execvp(tmp1[0], tmp1) == -1) {
+      printf("Process did not execute correctly\n");
+      exit(1);
+    }
+  }
+  // create processes item
+  processes[jId - 1].jobId = jId;
+  processes[jId - 1].processId = pid; // number from fork();
+  processes[jId - 1].status = (char *)malloc(bufsize * sizeof(char));
+  strcpy(processes[jId - 1].status, "RUNNING");
+  processes[jId - 1].command = tmp;
+  //
+  // free(tmp);
+  // only if execvp is successful
+  wait(NULL);
+  // printProcess(&processes[jobId--]);
+  jId++;
+  //printf("jId = %d\n", jId);
+  // if(jId > 2)
+  // exit(0);
+  // processes = (Process *) realloc(processes, jId * sizeof(Process));
+}
 
-void printProcess(Process *p) {
-  printf("[%d] %d %s %s", p->jobId, p->processId, p->status, p->command);
+void printProcess(Process p) {
+  printf("[%d] %d %s %s\n", p.jobId, p.processId, p.status, p.command);
+}
+
+void jobs(Process *processes) {
+  for (int i = 0; i < 10; i++) {
+    printProcess(processes[i]);
+  }
 }
 
 int main(int argc, char **argv) {
-  size_t bufsize = 32;
   Process *processes = (Process *)malloc(10 * sizeof(Process));
-  int jId = 1;
-  pid_t pid;
   char *tmp;
-  char **tmp1;
+  char *tmp1;
   while (1) {
     tmp = getCmd();
-    tmp1 = getArgs(tmp);
-    if (strcasecmp(tmp, "exit") == 0)
-      exit(0);
-    if ((pid = fork()) == -1) {
-      printf("Fork not successful, exiting...");
-    }
-    if (pid == 0) {
-      if (execvp(tmp1[0], tmp1) == -1) {
-        printf("Process did not execute correctly\n");
-        exit(1);
+    tmp1 = (char *)malloc((check+1) * sizeof(char));
+    strcpy(tmp1, tmp);
+    if(check == 1)
+      printf("ITS A BACKGROUND TASK");
+    //printf("tmp: %s\n", tmp);
+    if (strcasecmp(tmp, "exit") == 0) {
+      break;
       }
-    }
-    free(tmp1);
-    free(tmp);
-    // only if execvp is successful
-    processes[jId - 1].jobId = jId;
-    processes[jId - 1].processId = pid; // number from fork();
-    processes[jId - 1].status = (char *)malloc(bufsize * sizeof(char));
-    char x[6] = "HELLO";
-    strcpy(processes[jId - 1].status, x);
-    processes[jId - 1].command = tmp;
-    wait(NULL);
-    // printProcess(&processes[jobId--]);
-    jId++;
+    createJob(tmp1, getArgs(tmp), processes);
+    check = 0;
   }
-  // for(int i = 0; i < 10; i++) {
-  // printProcess(&processes[i]);
-  //}
+  jobs(processes);
   return 0;
 }
