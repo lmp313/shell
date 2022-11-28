@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <signal.h>
 
 int jId = 1;
 size_t bufsize = 32;
@@ -33,6 +34,7 @@ void freeJob(Process *ptr) {
 
 void free_linked_list(){
   for(Process* ptr=head; ptr!=NULL; ptr = ptr->next){
+    printf("ptr: %s", ptr->command);
     freeJob(ptr);
   }
 }
@@ -81,7 +83,7 @@ void removeProcess(int pid) {
       }
     Process *tmp = ptr->prev;
     //changing jobId for each job to one less since this job has terminated.
-    for(Process *t = tmp; t!=NULL; t = t->next){
+    for(Process *t = ptr; t!=NULL; t = t->next){
       t->jobId--;
     }
     if(ptr->next == NULL) {
@@ -99,24 +101,19 @@ void removeProcess(int pid) {
 }
 
 void exitShell() {
-  /*
-    When the shell exits, it should first send SIGHUP followed by SIGCONT to  
-    any stopped jobs, and SIGHUP to any running jobs.
-
-    //1. Iterate through jobs
-        a.  pid_t pid;
-            if(job is stopped *can check in process status) {
-              pid = the jobs processId;
-              kill(pid, SIGHUP);
-              kill(pid, SIGCONT);
-            } //job is running then
-            else {
-              pid = the jobs processId;
-              kill(pid, SIGHUP);
-            }
-  */
+  pid_t pid;
+  for(Process* ptr=head; ptr!=NULL; ptr = ptr->next){
+    pid = ptr->processId;
+    if(strcmp(ptr->status, "STOPPED")==0) {
+      kill(pid, SIGHUP);
+      kill(pid, SIGCONT);
+    } //job is running then
+    else {
+      kill(pid, SIGHUP);
+    }
+  }
   jobs(); //this line is for testing, remove before submitting.
-  //free_linked_list();
+  free_linked_list();
   exit(0);
 }
 
@@ -135,7 +132,7 @@ static void reapChild(int sig) {
 	pid = wait(&status);
 	printf("parent: child process pid=%d exited with value %d\n",
 		pid, WEXITSTATUS(status));
-  //removeProcess(pid);
+  removeProcess(pid);
 	signal(SIGCHLD, reapChild);
 }
 
@@ -225,13 +222,20 @@ char **getArgs(char *buffer) {
 }
 
 void createJob1(char *tmp, char **tmp1) {
+  signal(SIGINT, catchInt);
+  signal(SIGTSTP, catchTstp);
   pid_t pid;
   Process* new_job = (Process *)malloc(sizeof(Process));
+  sigemptyset(&set);
+  sigaddset(&set, SIGCHLD);
+  //setting up signal blocking so child does not send SIGCHILD (stop or term) before the entry is added to jobs list 
+  sigprocmask(SIG_BLOCK, &set, NULL);
   //forking and executing command
   if ((pid = fork()) == -1) {
     printf("Fork not successful, exiting...");
   }
   if (pid == 0) {
+    sigprocmask(SIG_UNBLOCK, &set, NULL);
     if (execvp(tmp1[0], tmp1) == -1) {
       printf("Process did not execute correctly\n");
       exit(1);
@@ -263,6 +267,7 @@ void createJob1(char *tmp, char **tmp1) {
       curr = curr->next;
     }
   }
+  sigprocmask(SIG_UNBLOCK, &set, NULL);
   //waiting for child process to either stop or terminate
   int status;
   waitpid(pid, &status, WUNTRACED);
@@ -326,6 +331,9 @@ void putBg(char **tmp1) {
   memmove(tmp1[1], tmp1[1]+1, strlen(tmp1[1])); //remove %
   Process *ptr = findProcess(atoi(tmp1[1]));
   signal(SIGCHLD, reapChild);
+  free(ptr->status);
+  ptr->status = (char *)malloc(bufsize * sizeof(char));
+  strcpy(ptr->status, "RUNNING");
   kill(ptr->processId, SIGCONT);
 }
 
@@ -334,6 +342,9 @@ void putFg(char **tmp1) {
   Process *ptr = findProcess(atoi(tmp1[1]));
   pid_t pid;
   pid = ptr->processId;
+  free(ptr->status);
+  ptr->status = (char *)malloc(bufsize * sizeof(char));
+  strcpy(ptr->status, "RUNNING");
   kill(pid, SIGCONT);
   int status;
   waitpid(pid, &status, WUNTRACED);
@@ -359,6 +370,7 @@ void killProc(char **tmp1) {
   memmove(tmp1[1], tmp1[1]+1, strlen(tmp1[1])); //remove %
   Process *ptr = findProcess(atoi(tmp1[1]));
   kill(ptr->processId, SIGTERM);
+  removeProcess(ptr->processId);
 }
 
 int main(int argc, char **argv) {
@@ -395,11 +407,11 @@ int main(int argc, char **argv) {
     }
     else if(check == 1) {
       createJob2(tmp1, getArgs(tmp)); //background task
-      sleep(10);
+      //sleep(10);
     }
     else if(check == 2) {
       putBg(getArgs(tmp));
-      sleep(10);
+      //sleep(10);
     }
     else if(check == 3) {
       putFg(getArgs(tmp));
