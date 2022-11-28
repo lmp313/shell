@@ -12,7 +12,7 @@ int check = 0;
 sigset_t set;
 
 typedef struct Process {
-  int isBg;
+  int isBg; // 1 if background process
   int jobId;
   int processId;
   char *status;
@@ -135,11 +135,15 @@ static void reapChild(int sig) {
   int pid;
 	int status;
 
-	pid = wait(&status);
-	printf("parent: child process pid=%d exited with value %d\n",
-		pid, WEXITSTATUS(status));
-  removeProcess(pid);
-	signal(SIGCHLD, reapChild);
+	//pid = wait(&status);
+  while ((pid = waitpid(-1, &status, WNOHANG)) != -1) {
+	  if (WIFSIGNALED(status)) {
+      Process *tmp = findProcessP(pid);
+      printf("[%d] %d terminated by signal %d\n", tmp->jobId, pid, WTERMSIG(status));
+    }
+    removeProcess(pid);
+    }
+	//signal(SIGCHLD, reapChild);
 }
 
 Process* findFg() {
@@ -405,6 +409,7 @@ void putBg(char **tmp1) {
   free(ptr->status);
   ptr->status = (char *)malloc(bufsize * sizeof(char));
   strcpy(ptr->status, "RUNNING");
+  ptr->isBg = 1;
   kill(ptr->processId, SIGCONT);
 }
 
@@ -416,6 +421,7 @@ void putFg(char **tmp1) {
   free(ptr->status);
   ptr->status = (char *)malloc(bufsize * sizeof(char));
   strcpy(ptr->status, "RUNNING");
+  ptr->isBg = 0;
   kill(pid, SIGCONT);
   int status;
   waitpid(pid, &status, WUNTRACED);
