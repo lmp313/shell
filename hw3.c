@@ -219,9 +219,9 @@ char **getArgs(char *buffer) {
   }
 
   tokens[length] = NULL;
-  for(int i = 0; i < length; i++) {
+  /*for(int i = 0; i < length; i++) {
     printf("tokens[%d] = %s\n", i, tokens[i]);
-  }
+  }*/
   return tokens;
 }
 
