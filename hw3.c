@@ -43,11 +43,7 @@ void free_linked_list(){
 void jobs() {
   for(Process* ptr = head; ptr!=NULL;ptr = ptr->next){
     if(ptr->isBg == 1) {
-      char *tmp = (char *)malloc(bufsize * sizeof(char));
-      strcpy(tmp, ptr->command);
-      strncat(tmp, "&", 1);
-      printf("[%d] %d %s %s\n", ptr->jobId, ptr->processId, ptr->status, tmp);
-      free(tmp);
+      printf("[%d] %d %s %s &\n", ptr->jobId, ptr->processId, ptr->status, ptr->command);
     }
     else
       printf("[%d] %d %s %s\n", ptr->jobId, ptr->processId, ptr->status, ptr->command);
