@@ -408,15 +408,12 @@ int main(int argc, char **argv) {
     //unblocking signals
   sigprocmask(SIG_UNBLOCK, &set, NULL);
     //printf("tmp = %s\n", tmp);
-    tmp1 = (char *)malloc(bufsize * sizeof(char));
-    strcpy(tmp1, tmp);
     char **tokenslist;
     //printf("CHECK == %d\n", check);
     //check == 0 if foreground task, check == 1 if background task, check == 2 if bg, check == 3 if fg, check == 4 if cd
     if (strcasecmp(tmp, "exit") == 0) {
       //printf("EXITING\n");
       free(tmp);
-      free(tmp1);
       exitShell();
       }
     else if (strcasecmp(tmp, "jobs") == 0) {
@@ -428,11 +425,17 @@ int main(int argc, char **argv) {
         free(tokenslist);
       }
     else if(check == 0) {
+      tmp1 = (char *)malloc(bufsize * sizeof(char)); 
+      //tmp1 becomes command, tmp is not used for anything
+      strcpy(tmp1, tmp); 
       tokenslist = getArgs(tmp);
       createJob1(tmp1, tokenslist); //foreground task
       free(tokenslist);
     }
     else if(check == 1) {
+      tmp1 = (char *)malloc(bufsize * sizeof(char)); 
+      //tmp1 becomes command, tmp is not used for anything
+      strcpy(tmp1, tmp); 
       tokenslist = getArgs(tmp);
       createJob2(tmp1, tokenslist); //background task
       free(tokenslist);
