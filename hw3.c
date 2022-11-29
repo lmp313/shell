@@ -43,7 +43,11 @@ void free_linked_list(){
 void jobs() {
   for(Process* ptr = head; ptr!=NULL;ptr = ptr->next){
     if(ptr->isBg == 1) {
-      printf("[%d] %d %s %s &\n", ptr->jobId, ptr->processId, ptr->status, ptr->command);
+      char *tmp = (char *)malloc(bufsize * sizeof(char));
+      strcpy(tmp, ptr->command);
+      strncat(tmp, "&", 1);
+      printf("[%d] %d %s %s\n", ptr->jobId, ptr->processId, ptr->status, tmp);
+      free(tmp);
     }
     else
       printf("[%d] %d %s %s\n", ptr->jobId, ptr->processId, ptr->status, ptr->command);
@@ -246,7 +250,7 @@ void createJob1(char *tmp, char **tmp1) {
   if (pid == 0) {
     sigprocmask(SIG_UNBLOCK, &set, NULL);
     if (execvp(tmp1[0], tmp1) == -1) {
-      printf("%s: Process did not execute correctly\n", tmp1[0]);
+      printf("%s: command not found\n", tmp1[0]);
       exit(1);
     }
   }
@@ -303,7 +307,7 @@ void createJob2(char *tmp, char **tmp1) {
     //unblocking signals for child process
     sigprocmask(SIG_UNBLOCK, &set, NULL);
     if (execvp(tmp1[0], tmp1) == -1) {
-      printf("%s: Process did not execute correctly\n", tmp1[0]);
+      printf("%s: command not found\n", tmp1[0]);
       exit(1);
     }
   }
