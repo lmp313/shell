@@ -10,6 +10,7 @@ int jId = 1;
 size_t bufsize = 32;
 int check = 0;
 sigset_t set;
+//int tokenSize;
 
 typedef struct Process {
   int isBg; // 1 if background process
@@ -112,7 +113,7 @@ void exitShell() {
       kill(pid, SIGHUP);
     }
   }
-  jobs(); //this line is for testing, remove before submitting.
+  //jobs(); //this line is for testing, remove before submitting.
   free_linked_list();
   exit(0);
 }
@@ -160,6 +161,13 @@ static void catchTstp(int sig) {
     return;
   kill(tmp->processId, SIGTSTP);
 }
+
+/*void freeTokens(char** tokens) {
+  for(int i = 0; i < tokenSize; i++) {
+    free(tokens[i]);
+  }
+  free(tokens);
+}*/
 
 char *getCmd() {
   char *buffer;
@@ -219,6 +227,7 @@ char **getArgs(char *buffer) {
   }
 
   tokens[length] = NULL;
+  //tokenSize = length;
   /*for(int i = 0; i < length; i++) {
     printf("tokens[%d] = %s\n", i, tokens[i]);
   }*/
@@ -253,7 +262,7 @@ void createJob1(char *tmp, char **tmp1) {
   strcpy(new_job->status, "RUNNING");
   new_job->next = NULL;
   new_job->prev = NULL;
-  printf("tmp = %s\n", tmp);
+  //printf("tmp = %s\n", tmp);
   new_job->command = tmp;
   //adding it to linkedlist
   if(head==NULL){
@@ -394,37 +403,51 @@ int main(int argc, char **argv) {
     //unblocking signals
   sigprocmask(SIG_UNBLOCK, &set, NULL);
     //printf("tmp = %s\n", tmp);
-    tmp1 = (char *)malloc((check+1) * sizeof(char));
+    tmp1 = (char *)malloc(bufsize * sizeof(char));
     strcpy(tmp1, tmp);
+    char **tokenslist;
     //printf("CHECK == %d\n", check);
     //check == 0 if foreground task, check == 1 if background task, check == 2 if bg, check == 3 if fg, check == 4 if cd
     if (strcasecmp(tmp, "exit") == 0) {
-      printf("EXITING\n");
+      //printf("EXITING\n");
       exitShell();
       }
     else if (strcasecmp(tmp, "jobs") == 0) {
         jobs();
       }
       else if (strstr(tmp, "kill") != NULL) {
-        killProc(getArgs(tmp));
+        tokenslist = getArgs(tmp);
+        killProc(tokenslist);
+        free(tokenslist);
       }
     else if(check == 0) {
-      createJob1(tmp1, getArgs(tmp)); //foreground task
+      tokenslist = getArgs(tmp);
+      createJob1(tmp1, tokenslist); //foreground task
+      free(tokenslist);
     }
     else if(check == 1) {
-      createJob2(tmp1, getArgs(tmp)); //background task
+      tokenslist = getArgs(tmp);
+      createJob2(tmp1, tokenslist); //background task
+      free(tokenslist);
       //sleep(10);
     }
     else if(check == 2) {
-      putBg(getArgs(tmp));
+      tokenslist = getArgs(tmp);
+      putBg(tokenslist);
+      free(tokenslist);
       //sleep(10);
     }
     else if(check == 3) {
-      putFg(getArgs(tmp));
+      tokenslist = getArgs(tmp);
+      putFg(tokenslist);
+      free(tokenslist);
     }
     else if(check == 4) {
-      doCd(getArgs(tmp));
+      tokenslist = getArgs(tmp);
+      doCd(tokenslist);
+      free(tokenslist);
     }
+    //tokenSize = 0;
     free(tmp);
     check = 0;
   }
