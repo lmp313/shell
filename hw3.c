@@ -10,9 +10,10 @@ int jId = 1;
 size_t bufsize = 32;
 int check = 0;
 sigset_t set;
+//int tokenSize;
 
 typedef struct Process {
-  int isBg;
+  int isBg; // 1 if background process
   int jobId;
   int processId;
   char *status;
@@ -22,12 +23,6 @@ typedef struct Process {
   // char **args;
 } Process;
 
-<<<<<<< HEAD
-Process* head = (Process*)malloc(sizeof(Process));
-Process* last = NULL;
-Process* curr = NULL;
-
-=======
 Process* head = NULL;
 Process* last = NULL;
 Process* curr = NULL;
@@ -118,7 +113,7 @@ void exitShell() {
       kill(pid, SIGHUP);
     }
   }
-  jobs(); //this line is for testing, remove before submitting.
+  //jobs(); //this line is for testing, remove before submitting.
   free_linked_list();
   exit(0);
 }
@@ -135,11 +130,15 @@ static void reapChild(int sig) {
   int pid;
 	int status;
 
-	pid = wait(&status);
-	printf("parent: child process pid=%d exited with value %d\n",
-		pid, WEXITSTATUS(status));
-  removeProcess(pid);
-	signal(SIGCHLD, reapChild);
+	//pid = wait(&status);
+  while ((pid = waitpid(-1, &status, WNOHANG)) != -1) {
+	  if (WIFSIGNALED(status)) {
+      Process *tmp = findProcessP(pid);
+      printf("[%d] %d terminated by signal %d\n", tmp->jobId, pid, WTERMSIG(status));
+    }
+    removeProcess(pid);
+    }
+	//signal(SIGCHLD, reapChild);
 }
 
 Process* findFg() {
@@ -163,7 +162,13 @@ static void catchTstp(int sig) {
   kill(tmp->processId, SIGTSTP);
 }
 
->>>>>>> 3d446a76ea943a5da7ee7026809f59378ea7121b
+/*void freeTokens(char** tokens) {
+  for(int i = 0; i < tokenSize; i++) {
+    free(tokens[i]);
+  }
+  free(tokens);
+}*/
+
 char *getCmd() {
   char *buffer;
   int tmp;
@@ -222,16 +227,13 @@ char **getArgs(char *buffer) {
   }
 
   tokens[length] = NULL;
+  //tokenSize = length;
   /*for(int i = 0; i < length; i++) {
     printf("tokens[%d] = %s\n", i, tokens[i]);
   }*/
   return tokens;
 }
 
-<<<<<<< HEAD
-void createJob(char *tmp, char **tmp1) {
-  Process* new_job = (Process *)malloc(sizeof(Process));
-=======
 void createJob1(char *tmp, char **tmp1) {
   signal(SIGINT, catchInt);
   signal(SIGTSTP, catchTstp);
@@ -242,7 +244,6 @@ void createJob1(char *tmp, char **tmp1) {
   //setting up signal blocking so child does not send SIGCHILD (stop or term) before the entry is added to jobs list 
   sigprocmask(SIG_BLOCK, &set, NULL);
   //forking and executing command
->>>>>>> 3d446a76ea943a5da7ee7026809f59378ea7121b
   if ((pid = fork()) == -1) {
     printf("Fork not successful, exiting...");
   }
@@ -253,33 +254,6 @@ void createJob1(char *tmp, char **tmp1) {
       exit(1);
     }
   }
-<<<<<<< HEAD
-  if(head==NULL){
-    // processes[jId - 1].jobId = jId;
-    // processes[jId - 1].processId = pid; // number from fork();
-    // processes[jId - 1].status = (char *)malloc(bufsize * sizeof(char));
-    // strcpy(processes[jId - 1].status, "RUNNING");
-    // processes[jId - 1].command = tmp;
-    head->jobId = jId;
-    head->processId = pid;
-    head->status = (char *)malloc(bufsize * sizeof(char));
-    strcpy(head->status, "RUNNING");
-    head->next = NULL;
-    head->prev = NULL;
-    head->command = tmp;
-  }else{
-    curr = head;
-    while(curr->next!=NULL){
-      if(curr->next==NULL){
-        new_job->jobId = jId;
-        new_job->processId = pid;
-        new_job->status = (char *)malloc(bufsize * sizeof(char));
-        strcpy(curr->status, "RUNNING");
-        new_job->next = NULL;
-        new_job->prev = curr;
-        new_job->command = tmp;
-        last = new_job;
-=======
   // create process item
   new_job->isBg = 0;
   new_job->jobId = jId;
@@ -288,7 +262,7 @@ void createJob1(char *tmp, char **tmp1) {
   strcpy(new_job->status, "RUNNING");
   new_job->next = NULL;
   new_job->prev = NULL;
-  printf("tmp = %s\n", tmp);
+  //printf("tmp = %s\n", tmp);
   new_job->command = tmp;
   //adding it to linkedlist
   if(head==NULL){
@@ -359,42 +333,10 @@ void createJob2(char *tmp, char **tmp1) {
         new_job->prev = curr;
         last = new_job;
         break;
->>>>>>> 3d446a76ea943a5da7ee7026809f59378ea7121b
       }
       curr = curr->next;
     }
   }
-<<<<<<< HEAD
-  wait(NULL);
-  jId++;
-  // create processes item
-  // processes[jId - 1].jobId = jId;
-  // processes[jId - 1].processId = pid; // number from fork();
-  // processes[jId - 1].status = (char *)malloc(bufsize * sizeof(char));
-  // strcpy(processes[jId - 1].status, "RUNNING");
-  // processes[jId - 1].command = tmp;
-  //
-  // free(tmp);
-  // only if execvp is successful
-  // wait(NULL);
-  // printProcess(&processes[jobId--]);
-  // jId++;
-  //printf("jId = %d\n", jId);
-  // if(jId > 2)
-  // exit(0);
-  // processes = (Process *) realloc(processes, jId * sizeof(Process));
-}
-
-void free_linked_list(Process* temp){
-  for(Process* ptr=temp; ptr!=NULL; ptr = ptr->next){
-    free(ptr);
-  }
-}
-
-void printProcess(Process* p) {
-  for(Process* ptr = p; ptr!=NULL;ptr = ptr->next){
-    printf("[%d] %d %s %s\n", ptr->jobId, ptr->processId, ptr->status, ptr->command);
-=======
   jId++;
 }
 
@@ -405,6 +347,7 @@ void putBg(char **tmp1) {
   free(ptr->status);
   ptr->status = (char *)malloc(bufsize * sizeof(char));
   strcpy(ptr->status, "RUNNING");
+  ptr->isBg = 1;
   kill(ptr->processId, SIGCONT);
 }
 
@@ -416,6 +359,7 @@ void putFg(char **tmp1) {
   free(ptr->status);
   ptr->status = (char *)malloc(bufsize * sizeof(char));
   strcpy(ptr->status, "RUNNING");
+  ptr->isBg = 0;
   kill(pid, SIGCONT);
   int status;
   waitpid(pid, &status, WUNTRACED);
@@ -423,7 +367,6 @@ void putFg(char **tmp1) {
     free(ptr->status);
     ptr->status = (char *)malloc(bufsize * sizeof(char));
     strcpy(ptr->status, "STOPPED");
->>>>>>> 3d446a76ea943a5da7ee7026809f59378ea7121b
   }
   else {
     removeProcess(pid);
@@ -431,11 +374,13 @@ void putFg(char **tmp1) {
 }
 
 void doCd(char **tmp1) {
-  //use chdir https://www.geeksforgeeks.org/chdir-in-c-language-with-examples/
-  /*
-    Change current directory to the given (absolute or relative) path. If no       path is given, use the value of environment variable HOME. Your shell          should update the environment variable PWD with the (absolute) present 
-    working directory after running cd. 
-  */
+    if (tmp1[1] == NULL) {
+        fprintf(stderr, "cd: missing argument\n");
+    } else {
+        if (chdir(tmp1[1]) != 0) {
+            perror("cd: no directory found");
+        }
+    }
 }
 
 void killProc(char **tmp1) {
@@ -445,15 +390,7 @@ void killProc(char **tmp1) {
   removeProcess(ptr->processId);
 }
 
-void jobs(Process *processes) {
-    printProcess(head);
-}
-
 int main(int argc, char **argv) {
-<<<<<<< HEAD
-  // Process *processes = (Process *)malloc(10 * sizeof(Process));
-=======
->>>>>>> 3d446a76ea943a5da7ee7026809f59378ea7121b
   char *tmp;
   char *tmp1;
   sigemptyset(&set);
@@ -468,49 +405,53 @@ int main(int argc, char **argv) {
     //unblocking signals
   sigprocmask(SIG_UNBLOCK, &set, NULL);
     //printf("tmp = %s\n", tmp);
-    tmp1 = (char *)malloc((check+1) * sizeof(char));
+    tmp1 = (char *)malloc(bufsize * sizeof(char));
     strcpy(tmp1, tmp);
+    char **tokenslist;
     //printf("CHECK == %d\n", check);
     //check == 0 if foreground task, check == 1 if background task, check == 2 if bg, check == 3 if fg, check == 4 if cd
     if (strcasecmp(tmp, "exit") == 0) {
-<<<<<<< HEAD
-      break;
-    }
-    createJob(tmp1, getArgs(tmp));
-    check = 0;
-  }
-  free_linked_list(head);
-  // jobs(processes);
-=======
-      printf("EXITING\n");
+      //printf("EXITING\n");
       exitShell();
       }
     else if (strcasecmp(tmp, "jobs") == 0) {
         jobs();
       }
       else if (strstr(tmp, "kill") != NULL) {
-        killProc(getArgs(tmp));
+        tokenslist = getArgs(tmp);
+        killProc(tokenslist);
+        free(tokenslist);
       }
     else if(check == 0) {
-      createJob1(tmp1, getArgs(tmp)); //foreground task
+      tokenslist = getArgs(tmp);
+      createJob1(tmp1, tokenslist); //foreground task
+      free(tokenslist);
     }
     else if(check == 1) {
-      createJob2(tmp1, getArgs(tmp)); //background task
+      tokenslist = getArgs(tmp);
+      createJob2(tmp1, tokenslist); //background task
+      free(tokenslist);
       //sleep(10);
     }
     else if(check == 2) {
-      putBg(getArgs(tmp));
+      tokenslist = getArgs(tmp);
+      putBg(tokenslist);
+      free(tokenslist);
       //sleep(10);
     }
     else if(check == 3) {
-      putFg(getArgs(tmp));
+      tokenslist = getArgs(tmp);
+      putFg(tokenslist);
+      free(tokenslist);
     }
     else if(check == 4) {
-      doCd(getArgs(tmp));
+      tokenslist = getArgs(tmp);
+      doCd(tokenslist);
+      free(tokenslist);
     }
+    //tokenSize = 0;
     free(tmp);
     check = 0;
   }
->>>>>>> 3d446a76ea943a5da7ee7026809f59378ea7121b
   return 0;
 }
