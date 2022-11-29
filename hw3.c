@@ -250,7 +250,7 @@ void createJob1(char *tmp, char **tmp1) {
   if (pid == 0) {
     sigprocmask(SIG_UNBLOCK, &set, NULL);
     if (execvp(tmp1[0], tmp1) == -1) {
-      printf("Process did not execute correctly\n");
+      printf("%s: Process did not execute correctly\n", tmp1[0]);
       exit(1);
     }
   }
@@ -307,7 +307,7 @@ void createJob2(char *tmp, char **tmp1) {
     //unblocking signals for child process
     sigprocmask(SIG_UNBLOCK, &set, NULL);
     if (execvp(tmp1[0], tmp1) == -1) {
-      printf("Process did not execute correctly\n");
+      printf("%s: Process did not execute correctly\n", tmp1[0]);
       exit(1);
     }
   }
