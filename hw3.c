@@ -128,6 +128,7 @@ static void reapChild(int sig) {
 
 	//pid = wait(&status);
   while ((pid = waitpid(-1, &status, WNOHANG)) != -1) {
+    printf("IN REAPCHILD");
 	  if (WIFSIGNALED(status)) {
       Process *tmp = findProcessP(pid);
       printf("[%d] %d terminated by signal %d\n", tmp->jobId, pid, WTERMSIG(status));
@@ -378,13 +379,11 @@ void putFg(char **tmp1) {
 }
 
 void doCd(char **tmp1) {
-    if (tmp1[1] == NULL) {
-        fprintf(stderr, "cd: missing argument\n");
-    } else {
-        if (chdir(tmp1[1]) != 0) {
-            perror("cd: no directory found");
-        }
-    }
+  //use chdir https://www.geeksforgeeks.org/chdir-in-c-language-with-examples/
+  /*
+    Change current directory to the given (absolute or relative) path. If no       path is given, use the value of environment variable HOME. Your shell          should update the environment variable PWD with the (absolute) present 
+    working directory after running cd. 
+  */
 }
 
 void killProc(char **tmp1) {
@@ -416,6 +415,8 @@ int main(int argc, char **argv) {
     //check == 0 if foreground task, check == 1 if background task, check == 2 if bg, check == 3 if fg, check == 4 if cd
     if (strcasecmp(tmp, "exit") == 0) {
       //printf("EXITING\n");
+      free(tmp);
+      free(tmp1);
       exitShell();
       }
     else if (strcasecmp(tmp, "jobs") == 0) {
