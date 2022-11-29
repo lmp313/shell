@@ -45,7 +45,7 @@ void jobs() {
     if(ptr->isBg == 1) {
       char *tmp = (char *)malloc(bufsize * sizeof(char));
       strcpy(tmp, ptr->command);
-      strncat(tmp, "&", 1);
+      strncat(tmp, "&", 100);
       printf("[%d] %d %s %s\n", ptr->jobId, ptr->processId, ptr->status, tmp);
       free(tmp);
     }
