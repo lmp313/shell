@@ -370,11 +370,13 @@ void putFg(char **tmp1) {
 }
 
 void doCd(char **tmp1) {
-  //use chdir https://www.geeksforgeeks.org/chdir-in-c-language-with-examples/
-  /*
-    Change current directory to the given (absolute or relative) path. If no       path is given, use the value of environment variable HOME. Your shell          should update the environment variable PWD with the (absolute) present 
-    working directory after running cd. 
-  */
+    if (tmp1[1] == NULL) {
+        fprintf(stderr, "cd: missing argument\n");
+    } else {
+        if (chdir(tmp1[1]) != 0) {
+            perror("cd: no directory found");
+        }
+    }
 }
 
 void killProc(char **tmp1) {
