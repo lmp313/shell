@@ -35,7 +35,7 @@ void freeJob(Process *ptr) {
 
 void free_linked_list(){
   for(Process* ptr=head; ptr!=NULL; ptr = ptr->next){
-    printf("ptr: %s", ptr->command);
+    //printf("ptr: %s", ptr->command);
     freeJob(ptr);
   }
 }
@@ -55,7 +55,7 @@ Process* findProcess(int jobId) {
     if(ptr->jobId == jobId)
       return ptr;
   }
-  printf("JOB NOT FOUND");
+  //printf("JOB NOT FOUND");
   return NULL;
 }
 
@@ -64,7 +64,7 @@ Process* findProcessP(int pId) {
     if(ptr->processId == pId)
       return ptr;
   }
-  printf("JOB NOT FOUND");
+  //printf("JOB NOT FOUND");
   return NULL;
 }
 
@@ -102,11 +102,11 @@ void exitShell() {
   for(Process* ptr=head; ptr!=NULL; ptr = ptr->next){
     pid = ptr->processId;
     if(strcmp(ptr->status, "STOPPED")==0) {
-      kill(pid, SIGHUP);
-      kill(pid, SIGCONT);
+      killpg(getpgid(pid), SIGHUP);
+      killpg(getpgid(pid), SIGCONT);
     } //job is running then
     else {
-      kill(pid, SIGHUP);
+      killpg(getpgid(pid), SIGHUP);
     }
   }
   //jobs(); //this line is for testing, remove before submitting.
@@ -149,13 +149,13 @@ static void catchInt(int sig) {
   Process *tmp = findFg();
   if(tmp == NULL)
     return;
-  kill(tmp->processId, SIGINT);
+  killpg(getpgid(tmp->processId), SIGINT);
 }
 static void catchTstp(int sig) {
   Process *tmp = findFg();
   if(tmp == NULL)
     return;
-  kill(tmp->processId, SIGTSTP);
+  killpg(getpgid(tmp->processId), SIGTSTP);
 }
 
 /*void freeTokens(char** tokens) {
@@ -242,14 +242,18 @@ void createJob1(char *tmp, char **tmp1) {
   //forking and executing command
   if ((pid = fork()) == -1) {
     printf("Fork not successful, exiting...");
+    exit(1);
   }
   if (pid == 0) {
+    setpgid(getpid(), getpid());
     sigprocmask(SIG_UNBLOCK, &set, NULL);
+    //printf("INSIDE, pid: %d, process group id: %d\n", pid, getpgrp());
     if (execvp(tmp1[0], tmp1) == -1) {
-      printf("Process did not execute correctly\n");
+      printf("%s: Process did not execute correctly\n", tmp1[0]);
       exit(1);
     }
   }
+  //printf("OUTSIDE, pid: %d, process group id: %d\n", pid, getpgrp());
   // create process item
   new_job->isBg = 0;
   new_job->jobId = jId;
@@ -298,15 +302,19 @@ void createJob2(char *tmp, char **tmp1) {
   //forking and executing command
   if ((pid = fork()) == -1) {
     printf("Fork not successful, exiting...");
+    exit(1);
   }
   if (pid == 0) {
+    setpgid(getpid(), getpid());
     //unblocking signals for child process
     sigprocmask(SIG_UNBLOCK, &set, NULL);
+    //printf("INSIDE, pid: %d, process group id: %d\n", getpid(), getpgrp());
     if (execvp(tmp1[0], tmp1) == -1) {
-      printf("Process did not execute correctly\n");
+      printf("%s: Process did not execute correctly\n", tmp1[0]);
       exit(1);
     }
   }
+  //printf("OUTSIDE, pid: %d, process group id: %d\n", pid, getpgrp());
   // create process item
   new_job->isBg = 1;
   new_job->jobId = jId;
@@ -344,7 +352,7 @@ void putBg(char **tmp1) {
   ptr->status = (char *)malloc(bufsize * sizeof(char));
   strcpy(ptr->status, "RUNNING");
   ptr->isBg = 1;
-  kill(ptr->processId, SIGCONT);
+  killpg(getpgid(ptr->processId), SIGCONT);
 }
 
 void putFg(char **tmp1) {
@@ -356,7 +364,7 @@ void putFg(char **tmp1) {
   ptr->status = (char *)malloc(bufsize * sizeof(char));
   strcpy(ptr->status, "RUNNING");
   ptr->isBg = 0;
-  kill(pid, SIGCONT);
+  killpg(getpgid(pid), SIGCONT);
   int status;
   waitpid(pid, &status, WUNTRACED);
   if(WIFSTOPPED(status)) {
@@ -380,7 +388,7 @@ void doCd(char **tmp1) {
 void killProc(char **tmp1) {
   memmove(tmp1[1], tmp1[1]+1, strlen(tmp1[1])); //remove %
   Process *ptr = findProcess(atoi(tmp1[1]));
-  kill(ptr->processId, SIGTERM);
+  killpg(getpgid(ptr->processId), SIGTERM);
   removeProcess(ptr->processId);
 }
 
