@@ -181,8 +181,10 @@ char *getCmd() {
 
   printf("> ");
   tmp = getline(&buffer, &bufsize, stdin);
-  if(tmp == -1)
+  if(tmp == -1){    
+    free(buffer);
     exitShell();
+  }
   if (buffer[tmp - 2] == '&') {
     check = 1; //(tmp-2) so that I can know size of buffer for later
     buffer[tmp - 2] = '\0';
@@ -412,6 +414,7 @@ int main(int argc, char **argv) {
     //check == 0 if foreground task, check == 1 if background task, check == 2 if bg, check == 3 if fg, check == 4 if cd
     if (strcasecmp(tmp, "exit") == 0) {
       //printf("EXITING\n");
+      free(tmp1);
       exitShell();
       }
     else if (strcasecmp(tmp, "jobs") == 0) {
